@@ -1,0 +1,1019 @@
+# .cursorrules - CertiChain Development Standards
+
+## Project Context
+This is a Web 2.5 blockchain certificate platform combining Ethereum smart contracts with traditional backend for optimal UX and cost efficiency.
+
+---
+
+## Tech Stack Rules
+
+### Smart Contracts
+- Language: Solidity ^0.8.20
+- Framework: Hardhat with TypeScript
+- Libraries: OpenZeppelin contracts only
+- Testing: Hardhat + Chai with >90% coverage required
+- Gas optimization: Always consider gas costs
+- Security: Follow checks-effects-interactions pattern
+
+### Frontend
+- Framework: Next.js 14 with App Router (not Pages Router)
+- Language: TypeScript (strict mode enabled)
+- Styling: TailwindCSS + shadcn/ui components
+- Web3: wagmi v2 + viem + RainbowKit
+- Forms: react-hook-form + zod validation
+- State: TanStack Query (React Query) for server state
+- No Redux, No MobX - use React Query and Context
+
+### Backend
+- API: Next.js API Routes (Route Handlers in App Router)
+- Database: PostgreSQL with Prisma ORM
+- Authentication: Web3Auth for social login + RainbowKit for wallet
+- Email: Resend with React Email templates
+- File uploads: IPFS via Pinata
+
+---
+
+## Code Style Guidelines
+
+### TypeScript
+```typescript
+// ✅ DO: Use explicit types - NEVER use `any`
+interface CertificateFormData {
+  recipientName: string;
+  recipientEmail: string;
+  recipientWallet: `0x${string}`;
+  certificateType: string;
+  description: string;
+  issueDate: Date;
+}
+
+// ❌ DON'T: Use implicit any or explicit any
+function processData(data) { // Bad - implicit any
+  // ...
+}
+
+function processData(data: any) { // Bad - explicit any
+  // ...
+}
+
+// ✅ DO: Use unknown instead of any for type safety
+function processData(data: unknown): void {
+  if (typeof data === 'object' && data !== null && 'id' in data) {
+    // Type-safe handling
+  }
+}
+
+// ✅ DO: Use type guards for runtime validation
+function isCertificate(obj: unknown): obj is Certificate {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'tokenId' in obj &&
+    'recipient' in obj &&
+    typeof (obj as Certificate).tokenId === 'number'
+  );
+}
+
+// ✅ DO: Use const assertions for readonly
+const CERTIFICATE_TYPES = ['diploma', 'course', 'achievement'] as const;
+type CertificateType = typeof CERTIFICATE_TYPES[number];
+
+// ✅ DO: Use Record type for object maps
+type CertificateMap = Record<string, Certificate>;
+// ❌ DON'T: { [key: string]: Certificate } or any
+
+// ✅ DO: Use utility types (Partial, Pick, Omit, etc.)
+type CertificateUpdate = Partial<Pick<Certificate, 'description' | 'isRevoked'>>;
+type CertificatePublic = Omit<Certificate, 'internalId' | 'secretKey'>;
+
+// ✅ DO: Use branded types for type safety
+type TokenId = number & { readonly brand: unique symbol };
+function createTokenId(value: number): TokenId {
+  return value as TokenId;
+}
+
+// ✅ DO: Prefer interfaces for objects (extensible)
+interface User {
+  id: string;
+  email: string;
+  walletAddress?: string;
+}
+
+// ✅ DO: Prefer types for unions/intersections
+type Result<T, E = Error> = 
+  | { success: true; data: T }
+  | { success: false; error: E };
+
+type ExtendedUser = User & { role: Role };
+
+// ✅ DO: Use strict null checks
+function getUser(id: string): User | null {
+  // Return null explicitly, not undefined
+}
+
+// ✅ DO: Use non-null assertion only when absolutely certain
+const user = getUser(id)!; // Only if you're 100% sure it's not null
+
+// ✅ DO: Use satisfies operator for type checking without widening
+const config = {
+  apiUrl: 'https://api.example.com',
+  timeout: 5000,
+} satisfies Config; // Type checked but not widened
+
+// ❌ DON'T: Use type assertions (as) without validation
+const user = data as User; // Bad - no validation
+// ✅ DO: Validate first, then type assert
+if (isUser(data)) {
+  const user = data as User; // Safe after validation
+}
+```
+
+### React Components
+```typescript
+// ✅ DO: Use function components with TypeScript
+interface CertificateCardProps {
+  tokenId: number;
+  recipientName: string;
+  certificateType: string;
+  isRevoked: boolean;
+  onView?: () => void;
+}
+
+export function CertificateCard({
+  tokenId,
+  recipientName,
+  certificateType,
+  isRevoked,
+  onView,
+}: CertificateCardProps) {
+  // Component logic
+}
+
+// ❌ DON'T: Use React.FC (deprecated pattern)
+const CertificateCard: React.FC<CertificateCardProps> = (props) => {
+  // Bad
+};
+
+// ✅ DO: Use descriptive component names
+export function IssueCertificateForm() { /* ... */ }
+
+// ❌ DON'T: Use generic names
+export function Form() { /* Bad */ }
+
+// ✅ DO: Keep components focused and small (<200 lines)
+// ✅ DO: Extract logic to custom hooks
+function useCertificateIssuance() {
+  const { issueCertificate, isPending } = useCertificateContract();
+  const { uploadToIPFS } = useIPFS();
+  // Complex logic here
+  return { handleIssue, isLoading };
+}
+```
+
+### Import Order & ESLint Standards
+
+```typescript
+// ✅ DO: Follow this import order:
+// 1. External dependencies (React, Next.js, etc.)
+// 2. Internal absolute imports (@/lib, @/components, etc.)
+// 3. Relative imports (./, ../)
+// 4. Type-only imports (use `import type`)
+
+// ✅ DO: Group and sort imports
+import React from 'react';
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+
+import { prisma } from '@/lib/db/prisma';
+import { uploadToIPFS } from '@/lib/ipfs/pinata';
+
+import type { Certificate } from '@/types/certificate';
+import type { UserRole } from '@/types/user';
+
+// ❌ DON'T: Mix import styles or unordered imports
+import { prisma } from '@/lib/db/prisma';
+import React from 'react'; // Bad - wrong order
+
+// ✅ DO: Use type-only imports when possible
+import type { Certificate } from '@/types/certificate';
+// ❌ DON'T: import { Certificate } when only using as type
+
+// ✅ DO: Remove unused imports
+// ❌ DON'T: Leave unused imports in code
+
+// ✅ DO: Use default exports sparingly (prefer named exports)
+export function CertificateCard() { /* ... */ }
+// ❌ DON'T: export default CertificateCard (harder to track)
+
+// ✅ DO: Use consistent naming in exports
+export { CertificateCard, CertificateList };
+// ❌ DON'T: Mix default and named exports from same module
+```
+
+**ESLint Configuration Requirements:**
+- Enable `@typescript-eslint/no-explicit-any` rule
+- Enable `@typescript-eslint/no-unsafe-assignment` and related rules
+- Use `eslint-plugin-import` for import order
+- Configure import order: external → internal → relative → types
+- Use `@typescript-eslint/consistent-type-imports` for type-only imports
+
+```json
+// .eslintrc.json example rules
+{
+  "rules": {
+    "@typescript-eslint/no-explicit-any": "error",
+    "@typescript-eslint/no-unsafe-assignment": "error",
+    "@typescript-eslint/no-unsafe-member-access": "error",
+    "@typescript-eslint/no-unsafe-call": "error",
+    "@typescript-eslint/consistent-type-imports": ["error", { "prefer": "type-imports" }],
+    "import/order": [
+      "error",
+      {
+        "groups": ["builtin", "external", "internal", "parent", "sibling", "index", "type"],
+        "pathGroups": [
+          {
+            "pattern": "@/**",
+            "group": "internal"
+          }
+        ],
+        "newlines-between": "always",
+        "alphabetize": { "order": "asc" }
+      }
+    ]
+  }
+}
+```
+
+### Async/Await
+```typescript
+// ✅ DO: Use try-catch for error handling
+async function issueCertificate() {
+  try {
+    const result = await contract.issueCertificate(...);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Failed to issue certificate:', error);
+    return { success: false, error };
+  }
+}
+
+// ❌ DON'T: Ignore errors
+async function issueCertificate() {
+  const result = await contract.issueCertificate(...); // Bad
+  return result;
+}
+
+// ✅ DO: Use Promise.all for parallel operations
+const [imageHash, userInfo] = await Promise.all([
+  uploadToIPFS(image),
+  fetchUserInfo(email),
+]);
+
+// ❌ DON'T: Sequential when can be parallel
+const imageHash = await uploadToIPFS(image); // Bad
+const userInfo = await fetchUserInfo(email); // Bad
+```
+
+---
+
+## SOLID Principles
+
+Follow SOLID principles for maintainable, scalable code:
+
+### Single Responsibility Principle (SRP)
+```typescript
+// ✅ DO: Each class/function has one reason to change
+class CertificateIssuer {
+  async issueCertificate(data: CertificateData): Promise<Certificate> {
+    // Only handles certificate issuance
+  }
+}
+
+class EmailNotifier {
+  async sendNotification(email: string, certificate: Certificate): Promise<void> {
+    // Only handles email notifications
+  }
+}
+
+// ❌ DON'T: Mix responsibilities
+class CertificateManager {
+  async issueCertificate() { /* ... */ }
+  async sendEmail() { /* ... */ } // Bad - different responsibility
+  async generatePDF() { /* ... */ } // Bad - different responsibility
+}
+```
+
+### Open/Closed Principle (OCP)
+```typescript
+// ✅ DO: Open for extension, closed for modification
+interface CertificateValidator {
+  validate(certificate: Certificate): boolean;
+}
+
+class StandardCertificateValidator implements CertificateValidator {
+  validate(certificate: Certificate): boolean {
+    // Standard validation logic
+  }
+}
+
+class StrictCertificateValidator implements CertificateValidator {
+  validate(certificate: Certificate): boolean {
+    // Stricter validation logic
+  }
+}
+
+// ❌ DON'T: Modify existing classes for new requirements
+class CertificateValidator {
+  validate(certificate: Certificate, strict: boolean): boolean {
+    // Bad - modifies existing class
+  }
+}
+```
+
+### Liskov Substitution Principle (LSP)
+```typescript
+// ✅ DO: Subtypes must be substitutable for their base types
+interface CertificateRepository {
+  findById(id: string): Promise<Certificate | null>;
+}
+
+class DatabaseCertificateRepository implements CertificateRepository {
+  async findById(id: string): Promise<Certificate | null> {
+    // Database implementation
+  }
+}
+
+class CacheCertificateRepository implements CertificateRepository {
+  async findById(id: string): Promise<Certificate | null> {
+    // Cache implementation - same contract
+  }
+}
+
+// ❌ DON'T: Violate the contract
+class BrokenCertificateRepository implements CertificateRepository {
+  async findById(id: string): Promise<Certificate> {
+    // Bad - doesn't return null, breaks contract
+    throw new Error('Not found');
+  }
+}
+```
+
+### Interface Segregation Principle (ISP)
+```typescript
+// ✅ DO: Many specific interfaces are better than one general interface
+interface CertificateReader {
+  read(id: string): Promise<Certificate>;
+}
+
+interface CertificateWriter {
+  write(certificate: Certificate): Promise<void>;
+}
+
+interface CertificateDeleter {
+  delete(id: string): Promise<void>;
+}
+
+// ❌ DON'T: Force clients to depend on methods they don't use
+interface CertificateRepository {
+  read(id: string): Promise<Certificate>;
+  write(certificate: Certificate): Promise<void>;
+  delete(id: string): Promise<void>;
+  export(format: string): Promise<Blob>; // Some clients don't need this
+}
+```
+
+### Dependency Inversion Principle (DIP)
+```typescript
+// ✅ DO: Depend on abstractions, not concretions
+interface IPFSUploader {
+  upload(file: File): Promise<string>;
+}
+
+class PinataUploader implements IPFSUploader {
+  async upload(file: File): Promise<string> {
+    // Pinata-specific implementation
+  }
+}
+
+class CertificateService {
+  constructor(private uploader: IPFSUploader) {} // Depends on abstraction
+  
+  async issueCertificate(data: CertificateData): Promise<Certificate> {
+    const hash = await this.uploader.upload(data.file);
+    // ...
+  }
+}
+
+// ❌ DON'T: Depend on concrete implementations
+class CertificateService {
+  private uploader = new PinataUploader(); // Bad - hard dependency
+  
+  async issueCertificate() {
+    const hash = await this.uploader.upload(file); // Can't swap implementation
+  }
+}
+```
+
+### SOLID in Practice
+```typescript
+// ✅ DO: Apply SOLID in function design
+function calculateCertificateHash(
+  data: CertificateData,
+  hasher: HashFunction // Dependency injection
+): string {
+  return hasher(data);
+}
+
+// ✅ DO: Use composition over inheritance
+class CertificateService {
+  constructor(
+    private validator: CertificateValidator,
+    private repository: CertificateRepository,
+    private notifier: EmailNotifier
+  ) {}
+}
+
+// ✅ DO: Keep functions small and focused
+function validateCertificateType(type: string): boolean {
+  // Single responsibility: validate type only
+  return CERTIFICATE_TYPES.includes(type as CertificateType);
+}
+```
+
+---
+
+## Smart Contract Standards
+
+### Function Structure
+```solidity
+// ✅ DO: Follow this order:
+// 1. External/Public functions
+// 2. Internal functions
+// 3. Private functions
+// 4. View/Pure functions last
+
+// ✅ DO: Use natspec comments
+/**
+ * @dev Issues a new certificate to recipient
+ * @param recipient Address of the certificate recipient
+ * @param certificateType Type of certificate being issued
+ * @param tokenURI IPFS URI containing certificate metadata
+ * @return tokenId The ID of the newly minted certificate
+ */
+function issueCertificate(
+    address recipient,
+    string memory certificateType,
+    string memory tokenURI
+) external onlyRole(ISSUER_ROLE) returns (uint256) {
+    // Implementation
+}
+
+// ✅ DO: Validate inputs
+require(recipient != address(0), "Invalid recipient");
+require(bytes(certificateType).length > 0, "Type required");
+
+// ✅ DO: Use custom errors for gas efficiency (Solidity 0.8.4+)
+error InvalidRecipient();
+error CertificateTypeRequired();
+
+if (recipient == address(0)) revert InvalidRecipient();
+```
+
+### Gas Optimization
+```solidity
+// ✅ DO: Use uint256 instead of smaller uints (unless packing)
+uint256 public tokenId; // Good
+
+// ❌ DON'T: Use smaller uints unnecessarily
+uint8 public tokenId; // Bad (costs more gas)
+
+// ✅ DO: Pack structs efficiently
+struct Certificate {
+    uint256 tokenId;      // 32 bytes
+    address recipient;    // 20 bytes
+    address issuer;       // 20 bytes
+    uint96 issuedAt;      // 12 bytes (fits with addresses in one slot)
+    bool isRevoked;       // 1 byte (fits in same slot)
+}
+
+// ✅ DO: Use immutable for constants set in constructor
+address public immutable owner;
+
+constructor() {
+    owner = msg.sender;
+}
+
+// ✅ DO: Use calldata instead of memory for external functions
+function process(string calldata data) external { /* ... */ }
+
+// ❌ DON'T: Use memory for read-only external params
+function process(string memory data) external { /* Bad */ }
+```
+
+### Security
+```solidity
+// ✅ DO: Follow checks-effects-interactions pattern
+function revokeCertificate(uint256 tokenId) external {
+    // Checks
+    require(_exists(tokenId), "Not found");
+    require(msg.sender == issuer, "Not authorized");
+    
+    // Effects
+    certificates[tokenId].isRevoked = true;
+    
+    // Interactions
+    emit CertificateRevoked(tokenId, msg.sender);
+}
+
+// ✅ DO: Use OpenZeppelin libraries
+import "@openzeppelin/contracts/access/AccessControl.sol";
+
+// ❌ DON'T: Roll your own security primitives
+// Bad - implement your own access control
+
+// ✅ DO: Emit events for important state changes
+emit CertificateIssued(tokenId, recipient, issuer);
+```
+
+---
+
+## API Route Standards
+
+### Route Structure
+```typescript
+// app/api/certificates/issue/route.ts
+
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { prisma } from '@/lib/db/prisma';
+
+// ✅ DO: Define request schema with Zod
+const issueSchema = z.object({
+  recipientName: z.string().min(2),
+  recipientEmail: z.string().email(),
+  recipientWallet: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+  certificateType: z.string().min(1),
+  description: z.string().min(10),
+  issueDate: z.string().datetime(),
+  ipfsHash: z.string(),
+  transactionHash: z.string(),
+});
+
+// ✅ DO: Type the request/response
+type IssueRequest = z.infer<typeof issueSchema>;
+
+export async function POST(request: NextRequest) {
+  try {
+    // ✅ DO: Validate input
+    const body = await request.json();
+    const data = issueSchema.parse(body);
+    
+    // ✅ DO: Check authentication
+    // const session = await getServerSession();
+    // if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    
+    // ✅ DO: Business logic
+    const certificate = await prisma.certificate.create({
+      data: {
+        ...data,
+        blockchainNetwork: 'sepolia',
+      },
+    });
+    
+    // ✅ DO: Return typed response
+    return NextResponse.json({
+      success: true,
+      data: certificate,
+    }, { status: 201 });
+    
+  } catch (error) {
+    // ✅ DO: Handle different error types
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({
+        error: 'Validation failed',
+        details: error.errors,
+      }, { status: 400 });
+    }
+    
+    console.error('Issue certificate error:', error);
+    return NextResponse.json({
+      error: 'Internal server error',
+    }, { status: 500 });
+  }
+}
+
+// ❌ DON'T: Skip validation
+export async function POST(request: NextRequest) {
+  const body = await request.json(); // Bad - no validation
+  await prisma.certificate.create({ data: body }); // Dangerous!
+}
+```
+
+---
+
+## Database Guidelines (Prisma)
+
+```typescript
+// ✅ DO: Use transactions for related operations
+await prisma.$transaction(async (tx) => {
+  const certificate = await tx.certificate.create({ data: certData });
+  await tx.emailNotification.create({ data: emailData });
+});
+
+// ✅ DO: Use select to limit returned fields
+const user = await prisma.user.findUnique({
+  where: { id },
+  select: {
+    id: true,
+    email: true,
+    walletAddress: true,
+    // Don't return sensitive fields
+  },
+});
+
+// ✅ DO: Use pagination
+const certificates = await prisma.certificate.findMany({
+  take: 20,
+  skip: page * 20,
+  orderBy: { createdAt: 'desc' },
+});
+
+// ✅ DO: Handle not found
+const cert = await prisma.certificate.findUnique({ where: { tokenId } });
+if (!cert) {
+  return NextResponse.json({ error: 'Not found' }, { status: 404 });
+}
+
+// ❌ DON'T: Expose raw errors to client
+try {
+  await prisma.user.create({ data });
+} catch (error) {
+  return NextResponse.json({ error: error.message }); // Bad - exposes internals
+}
+```
+
+---
+
+## Testing Standards
+
+### Smart Contract Tests
+```typescript
+// test/CertiChain.test.ts
+
+import { expect } from "chai";
+import { ethers } from "hardhat";
+
+describe("CertiChain", function () {
+  // ✅ DO: Use descriptive test names
+  it("should issue certificate with correct data", async function () {
+    // Arrange
+    const recipient = await ethers.getSigner();
+    const certificateType = "Course Completion";
+    const tokenURI = "ipfs://test";
+    
+    // Act
+    const tx = await contract.issueCertificate(
+      recipient.address,
+      certificateType,
+      tokenURI
+    );
+    
+    // Assert
+    await expect(tx)
+      .to.emit(contract, "CertificateIssued")
+      .withArgs(0, recipient.address, issuer.address, certificateType, tokenURI);
+    
+    const cert = await contract.getCertificate(0);
+    expect(cert.recipient).to.equal(recipient.address);
+  });
+  
+  // ✅ DO: Test error cases
+  it("should revert when non-issuer tries to issue", async function () {
+    await expect(
+      contract.connect(randomUser).issueCertificate(...)
+    ).to.be.reverted;
+  });
+  
+  // ✅ DO: Test gas costs
+  it("should use reasonable gas for batch issuance", async function () {
+    const tx = await contract.batchIssueCertificates([...]);
+    const receipt = await tx.wait();
+    expect(receipt.gasUsed).to.be.below(5000000);
+  });
+});
+```
+
+### Frontend Tests
+```typescript
+// __tests__/components/CertificateCard.test.tsx
+
+import { render, screen, fireEvent } from '@testing-library/react';
+import { CertificateCard } from '@/components/CertificateCard';
+
+describe('CertificateCard', () => {
+  // ✅ DO: Test component rendering
+  it('renders certificate information correctly', () => {
+    render(<CertificateCard {...mockProps} />);
+    
+    expect(screen.getByText('Course Completion')).toBeInTheDocument();
+    expect(screen.getByText('John Doe')).toBeInTheDocument();
+  });
+  
+  // ✅ DO: Test user interactions
+  it('calls onView when view button clicked', () => {
+    const onView = jest.fn();
+    render(<CertificateCard {...mockProps} onView={onView} />);
+    
+    fireEvent.click(screen.getByRole('button', { name: /view/i }));
+    expect(onView).toHaveBeenCalledTimes(1);
+  });
+});
+```
+
+---
+
+## Error Handling
+
+### Frontend
+```typescript
+// ✅ DO: Use react-error-boundary
+import { ErrorBoundary } from 'react-error-boundary';
+
+function ErrorFallback({ error, resetErrorBoundary }) {
+  return (
+    <div role="alert">
+      <p>Something went wrong:</p>
+      <pre>{error.message}</pre>
+      <button onClick={resetErrorBoundary}>Try again</button>
+    </div>
+  );
+}
+
+<ErrorBoundary FallbackComponent={ErrorFallback}>
+  <MyComponent />
+</ErrorBoundary>
+
+// ✅ DO: Show user-friendly messages
+try {
+  await issueCertificate(...);
+  toast.success('Certificate issued successfully!');
+} catch (error) {
+  if (error.code === 'INSUFFICIENT_FUNDS') {
+    toast.error('Insufficient funds. Please add ETH to your wallet.');
+  } else if (error.code === 'USER_REJECTED') {
+    toast.error('Transaction cancelled.');
+  } else {
+    toast.error('Failed to issue certificate. Please try again.');
+  }
+}
+```
+
+---
+
+## Security Checklist
+
+### Smart Contracts
+- [ ] All external functions have access control
+- [ ] Input validation on all parameters
+- [ ] Reentrancy protection (checks-effects-interactions)
+- [ ] No unchecked external calls
+- [ ] Events emitted for state changes
+- [ ] Gas limits considered (no unbounded loops)
+- [ ] Integer overflow/underflow handled (Solidity 0.8+)
+
+### Frontend
+- [ ] Input sanitization (prevent XSS)
+- [ ] CSRF protection
+- [ ] Rate limiting on API routes
+- [ ] Environment variables never exposed
+- [ ] SQL injection prevention (use Prisma)
+- [ ] Authentication on protected routes
+- [ ] Authorization checks on sensitive operations
+
+### General
+- [ ] Secrets in environment variables
+- [ ] HTTPS in production
+- [ ] CORS properly configured
+- [ ] Audit logs for important actions
+- [ ] Regular dependency updates
+- [ ] Code review before deployment
+
+---
+
+## Git Commit Standards
+
+```bash
+# ✅ DO: Use conventional commits
+feat: add batch certificate issuance
+fix: resolve wallet connection issue
+docs: update README with setup instructions
+test: add tests for certificate revocation
+refactor: simplify IPFS upload logic
+chore: update dependencies
+
+# ✅ DO: Write descriptive commit messages
+# Bad:
+git commit -m "fix bug"
+
+# Good:
+git commit -m "fix: handle null wallet address in verification flow
+
+- Add null check before wallet address comparison
+- Return appropriate error message for invalid addresses
+- Add test case for null wallet scenario"
+
+# ✅ DO: Keep commits focused
+# One commit = one logical change
+
+# ❌ DON'T: Mix different changes
+# Bad: feat: add login and fix verification and update docs
+```
+
+---
+
+## Performance Guidelines
+
+### Frontend
+```typescript
+// ✅ DO: Use React.memo for expensive components
+export const CertificateCard = React.memo(function CertificateCard(props) {
+  // Component logic
+});
+
+// ✅ DO: Use useCallback for callbacks
+const handleView = useCallback(() => {
+  router.push(`/certificate/${tokenId}`);
+}, [tokenId, router]);
+
+// ✅ DO: Use useMemo for expensive calculations
+const sortedCertificates = useMemo(() => {
+  return certificates.sort((a, b) => b.issuedAt - a.issuedAt);
+}, [certificates]);
+
+// ✅ DO: Lazy load heavy components
+const CertificateViewer = dynamic(() => import('@/components/CertificateViewer'), {
+  loading: () => <Skeleton />,
+});
+
+// ✅ DO: Optimize images
+import Image from 'next/image';
+
+<Image
+  src="/certificate.png"
+  alt="Certificate"
+  width={800}
+  height={600}
+  priority
+  placeholder="blur"
+/>
+```
+
+### API Routes
+```typescript
+// ✅ DO: Add caching headers
+export async function GET(request: NextRequest) {
+  const data = await fetchData();
+  
+  return NextResponse.json(data, {
+    headers: {
+      'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+    },
+  });
+}
+
+// ✅ DO: Use database indexes
+// In Prisma schema:
+model Certificate {
+  // ...
+  @@index([tokenId])
+  @@index([recipientEmail])
+}
+```
+
+---
+
+## Documentation Standards
+
+```typescript
+// ✅ DO: Document complex functions
+/**
+ * Issues a new certificate on the blockchain and saves to database
+ * 
+ * @param formData - Certificate information from the form
+ * @returns Object with success status and transaction hash
+ * @throws {ValidationError} If form data is invalid
+ * @throws {BlockchainError} If transaction fails
+ * 
+ * @example
+ * const result = await issueCertificate({
+ *   recipientName: "John Doe",
+ *   recipientEmail: "john@example.com",
+ *   // ...
+ * });
+ */
+async function issueCertificate(formData: CertificateFormData) {
+  // Implementation
+}
+
+// ✅ DO: Add JSDoc for types
+/**
+ * Certificate data structure
+ * @property {number} tokenId - Unique token identifier
+ * @property {string} recipient - Ethereum address of recipient
+ * @property {string} issuer - Ethereum address of issuer
+ */
+interface Certificate {
+  tokenId: number;
+  recipient: string;
+  issuer: string;
+}
+
+// ✅ DO: Document environment variables
+// In .env.example:
+# Database connection string (required)
+DATABASE_URL="postgresql://user:password@localhost:5432/db"
+
+# Blockchain RPC endpoint (required)
+RPC_URL="https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY"
+```
+
+---
+
+## File Organization
+
+```
+src/
+├── app/                    # Next.js App Router
+│   ├── (auth)/            # Auth group routes
+│   ├── (dashboard)/       # Dashboard group routes
+│   └── api/               # API routes
+│
+├── components/
+│   ├── layout/            # Layout components (Header, Footer)
+│   ├── certificate/       # Certificate-specific components
+│   ├── forms/             # Form components
+│   └── ui/                # shadcn/ui components
+│
+├── lib/
+│   ├── contracts/         # Smart contract ABIs & addresses
+│   ├── db/                # Database utilities
+│   ├── ipfs/              # IPFS functions
+│   └── utils/             # General utilities
+│
+├── hooks/                 # Custom React hooks
+├── types/                 # TypeScript type definitions
+└── styles/                # Global styles
+```
+
+---
+
+## AI Assistant Usage Guidelines
+
+### When to ask Cursor AI:
+✅ Implementation of specific features
+✅ Code refactoring
+✅ Bug fixing
+✅ Writing tests
+✅ Documentation
+✅ Type definitions
+✅ Optimization suggestions
+
+### How to ask effectively:
+```
+Good prompts:
+- "Implement the issueCertificate function following the smart contract spec"
+- "Add error handling to this API route with proper status codes"
+- "Write tests for the CertificateCard component"
+- "Refactor this code to follow the project standards"
+- "Add TypeScript types for this component"
+
+Bad prompts:
+- "Make it work"
+- "Fix this"
+- "Add a feature"
+```
+
+### Context to provide:
+- Reference relevant documentation sections
+- Specify the tech stack constraints
+- Mention project-specific patterns
+- Link to related code
+
+---
+
+## Final Reminders
+
+1. **Blockchain = Source of Truth**: Database is just a cache
+2. **Security First**: Always validate inputs and check permissions
+3. **User Experience**: Fast queries from database, verification from blockchain
+4. **Type Safety**: Use TypeScript strictly, no `any` - prefer `unknown` and type guards
+5. **SOLID Principles**: Apply SOLID principles for maintainable architecture
+6. **ESLint Standards**: Follow import order and TypeScript strict rules
+7. **Test Coverage**: >90% for smart contracts, aim for high coverage everywhere
+8. **Gas Efficiency**: Every wei counts in smart contracts
+9. **Error Handling**: Always handle errors gracefully
+10. **Documentation**: Code should be self-documenting with good naming and comments
+
+---
+
+Remember: These are guidelines, not absolute rules. Use judgment and ask for clarification when needed.

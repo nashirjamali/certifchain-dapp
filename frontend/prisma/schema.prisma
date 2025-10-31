@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  walletAddress String?  @unique
+  role          Role     @default(RECIPIENT)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  institution   Institution?
+  certificates  Certificate[] @relation("RecipientCertificates")
+}
+
+enum Role {
+  ADMIN
+  INSTITUTION
+  RECIPIENT
+}
+
+model Institution {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id])
+  institutionName   String
+  institutionType   String?
+  logo              String?
+  website           String?
+  walletAddress     String   @unique
+  isVerified        Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  certificates      Certificate[]
+}
+
+model Certificate {
+  id                  String   @id @default(cuid())
+  tokenId             BigInt   @unique
+  institutionId       String
+  institution         Institution @relation(fields: [institutionId], references: [id])
+  recipientName       String
+  recipientEmail      String
+  recipientWallet     String?
+  recipientUser       User?    @relation("RecipientCertificates", fields: [recipientWallet], references: [walletAddress])
+  certificateType     String
+  description         String?
+  issueDate           DateTime
+  ipfsHash            String
+  ipfsImageHash       String?
+  transactionHash     String
+  blockchainNetwork   String   @default("sepolia")
+  isRevoked           Boolean  @default(false)
+  revokedAt           DateTime?
+  revokedReason       String?
+  viewCount           Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  verificationLogs    VerificationLog[]
+  emailNotifications  EmailNotification[]
+  
+  @@index([tokenId])
+  @@index([recipientEmail])
+  @@index([recipientWallet])
+  @@index([institutionId])
+}
+
+model VerificationLog {
+  id              String   @id @default(cuid())
+  certificateId   String
+  certificate     Certificate @relation(fields: [certificateId], references: [id])
+  verifierIp      String?
+  verifierLocation String?
+  userAgent       String?
+  verifiedAt      DateTime @default(now())
+  
+  @@index([certificateId])
+  @@index([verifiedAt])
+}
+
+model EmailNotification {
+  id              String   @id @default(cuid())
+  certificateId   String
+  certificate     Certificate @relation(fields: [certificateId], references: [id])
+  recipientEmail  String
+  emailType       String
+  sentAt          DateTime?
+  status          String   @default("pending")
+  errorMessage    String?
+  createdAt       DateTime @default(now())
+}
