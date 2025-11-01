@@ -22,6 +22,8 @@ alwaysApply: true
 - Web3: wagmi v2 + viem + RainbowKit. No ethers.js or web3.js directly.
 - Prefer named exports; do NOT use `export default` except for Next.js pages/route handlers.
 - All imports ordered: external, internal, relative, then types.
+- Do not create custom components, please refer to aceternity UI
+- Make the UI simple as possible, reduce gradient or use backdrop
 
 ## Backend/API
 - Use Next.js API Route Handlers (in /app/api/).

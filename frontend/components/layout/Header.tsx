@@ -2,10 +2,17 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Menu, MenuItem, HoveredLink } from "@/components/ui/navbar-menu";
-import { Button } from "@/components/ui/button";
-import { FileCheck, Wallet } from "lucide-react";
-import { cn } from "@/lib/utils";
+import {
+  Navbar,
+  NavBody,
+  NavItems,
+  MobileNav,
+  MobileNavHeader,
+  MobileNavMenu,
+  MobileNavToggle,
+  NavbarButton,
+} from "@/components/ui/resizable-navbar";
+import { Wallet } from "lucide-react";
 
 interface HeaderProps {
   user?: unknown;
@@ -14,75 +21,97 @@ interface HeaderProps {
 }
 
 export function Header({ user, walletAddress, onConnect }: HeaderProps) {
-  const [active, setActive] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const navItems = [
+    { name: "Verify", link: "/verify" },
+    { name: "Dashboard", link: "/institution/dashboard" },
+    { name: "How It Works", link: "/how-it-works" },
+  ];
 
   return (
-    <header className={cn("fixed top-10 inset-x-0 max-w-4xl mx-auto z-50")}>
-      <div className="rounded-full border border-neutral-200 bg-white/80 backdrop-blur-md">
-        <div className="flex items-center justify-between px-6">
-          <h1 className="text-2xl font-bold">CertiChain</h1>
+    <Navbar className="top-10">
+      <NavBody>
+        <Link
+          href="/"
+          className="relative z-20 flex items-center space-x-2 px-2 py-1 text-xl font-bold text-black dark:text-white"
+        >
+          <span>CertiChain</span>
+        </Link>
+        <NavItems items={navItems} />
+        <div className="flex items-center gap-2">
+          {walletAddress ? (
+            <div className="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800">
+              <Wallet className="h-4 w-4 text-cyan-500" />
+              <span className="text-xs font-mono text-neutral-600 dark:text-neutral-300">
+                {walletAddress.slice(0, 4)}...{walletAddress.slice(-4)}
+              </span>
+            </div>
+          ) : (
+            <Link href="/auth/login">
+              <NavbarButton
+                as="span"
+                variant="primary"
+                className="flex items-center gap-1.5"
+              >
+                <Wallet className="h-4 w-4" />
+                Connect Wallet
+              </NavbarButton>
+            </Link>
+          )}
+        </div>
+      </NavBody>
 
-          <div className="flex-1 flex items-center justify-center">
-            <Menu setActive={setActive}>
-              <MenuItem setActive={setActive} active={active} item="Verify">
-                <div className="flex flex-col space-y-4 text-sm">
-                  <HoveredLink href="/verify">Verify Certificate</HoveredLink>
-                  <HoveredLink href="/certificate">
-                    View Certificate
-                  </HoveredLink>
-                </div>
-              </MenuItem>
-              <MenuItem setActive={setActive} active={active} item="Dashboard">
-                <div className="flex flex-col space-y-4 text-sm">
-                  <HoveredLink href="/institution/dashboard">
-                    Institution Dashboard
-                  </HoveredLink>
-                  <HoveredLink href="/institution/issue">
-                    Issue Certificate
-                  </HoveredLink>
-                </div>
-              </MenuItem>
-              <MenuItem setActive={setActive} active={active} item="Docs">
-                <div className="flex flex-col space-y-4 text-sm">
-                  <HoveredLink href="/how-it-works">Overview</HoveredLink>
-                  <HoveredLink href="/how-it-works#issuing">
-                    Issuing Certificates
-                  </HoveredLink>
-                  <HoveredLink href="/how-it-works#verification">
-                    Verification Process
-                  </HoveredLink>
-                  <HoveredLink href="/how-it-works#blockchain">
-                    Blockchain Security
-                  </HoveredLink>
-                </div>
-              </MenuItem>
-            </Menu>
-          </div>
-
-          <div className="flex items-center space-x-2 flex-shrink-0">
+      <MobileNav>
+        <MobileNavHeader>
+          <Link
+            href="/"
+            className="relative z-20 flex items-center space-x-2 px-2 py-1 text-xl font-bold text-black dark:text-white"
+          >
+            <span>CertiChain</span>
+          </Link>
+          <div className="flex items-center gap-2">
             {walletAddress ? (
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 px-2 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800">
                 <Wallet className="h-4 w-4 text-cyan-500" />
-                <span className="text-xs font-mono text-neutral-600">
+                <span className="text-xs font-mono text-neutral-600 dark:text-neutral-300">
                   {walletAddress.slice(0, 4)}...{walletAddress.slice(-4)}
                 </span>
               </div>
             ) : (
-              <>
-                <Button
-                  onClick={onConnect}
-                  size="lg"
-                  variant="ghost"
-                  className="rounded-full"
+              <Link href="/auth/login">
+                <NavbarButton
+                  as="span"
+                  variant="primary"
+                  className="flex items-center gap-1.5 text-xs px-3 py-1.5"
                 >
-                  <Wallet className="h-4 w-4 mr-1.5" />
-                  Connect Wallet
-                </Button>
-              </>
+                  <Wallet className="h-3 w-3" />
+                  Connect
+                </NavbarButton>
+              </Link>
             )}
+            <MobileNavToggle
+              isOpen={mobileMenuOpen}
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            />
           </div>
-        </div>
-      </div>
-    </header>
+        </MobileNavHeader>
+        <MobileNavMenu
+          isOpen={mobileMenuOpen}
+          onClose={() => setMobileMenuOpen(false)}
+        >
+          {navItems.map((item, idx) => (
+            <Link
+              key={idx}
+              href={item.link}
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white font-medium"
+            >
+              {item.name}
+            </Link>
+          ))}
+        </MobileNavMenu>
+      </MobileNav>
+    </Navbar>
   );
 }

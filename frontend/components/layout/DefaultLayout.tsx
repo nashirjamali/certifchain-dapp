@@ -21,8 +21,8 @@ export function DefaultLayout({
   return (
     <div className="flex min-h-screen flex-col">
       <Header user={user} walletAddress={walletAddress} onConnect={onConnect} />
-      <main className="flex-1 pt-24">
-        <Container>{children}</Container>
+      <main className="flex-1">
+        {children}
       </main>
       <Footer />
     </div>

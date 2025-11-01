@@ -1,13 +1,13 @@
 "use client";
 
-import { DefaultLayout } from "@/components/layout/DefaultLayout";
-import { AuthModal } from "@/components/auth/AuthModal";
-import { SocialLogin } from "@/components/auth/SocialLogin";
-import { WalletConnect } from "@/components/auth/WalletConnect";
 import { useState } from "react";
 
+import { SocialLogin } from "@/components/auth/SocialLogin";
+import { WalletConnect } from "@/components/auth/WalletConnect";
+
 export default function LoginPage() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [walletAddress, setWalletAddress] = useState<`0x${string}` | undefined>();
 
   const handleEmailLogin = () => {
     console.log("Email login");
@@ -19,43 +19,51 @@ export default function LoginPage() {
 
   const handleWalletConnect = () => {
     console.log("Wallet connect");
+    setIsConnected(true);
+    setWalletAddress("0x1234567890123456789012345678901234567890" as `0x${string}`);
   };
 
   const handleWalletDisconnect = () => {
     console.log("Wallet disconnect");
+    setIsConnected(false);
+    setWalletAddress(undefined);
   };
 
   return (
-    <DefaultLayout>
-      <main className="flex items-center justify-center min-h-[calc(100vh-200px)] py-16">
-        <div className="w-full max-w-md space-y-6">
-          <div className="text-center space-y-2">
-            <h1 className="text-3xl font-bold">Welcome to CertiChain</h1>
-            <p className="text-default-500">
-              Choose your preferred authentication method
+    <div className="relative min-h-[calc(100vh-200px)] w-full overflow-hidden bg-background">
+      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
+      <div className="relative z-50 flex min-h-[calc(100vh-200px)] flex-col items-center justify-center px-5 py-12">
+        <div className="w-full max-w-md space-y-8">
+          <div className="text-center space-y-2 mb-8">
+            <h1 className="text-4xl font-bold text-foreground md:text-5xl">
+              Connect Your Wallet
+            </h1>
+            <p className="text-muted-foreground">
+              Sign in to CertiChain
             </p>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-6">
             <SocialLogin
               onEmailLogin={handleEmailLogin}
               onGoogleLogin={handleGoogleLogin}
             />
 
             <div className="flex items-center gap-4">
-              <div className="flex-1 border-t border-default-200" />
-              <span className="text-sm text-default-500">OR</span>
-              <div className="flex-1 border-t border-default-200" />
+              <div className="flex-1 border-t border-border" />
+              <span className="text-sm text-muted-foreground">OR</span>
+              <div className="flex-1 border-t border-border" />
             </div>
 
             <WalletConnect
               onConnect={handleWalletConnect}
               onDisconnect={handleWalletDisconnect}
-              isConnected={false}
+              isConnected={isConnected}
+              address={walletAddress}
             />
           </div>
 
-          <div className="text-center text-sm text-default-500">
+          <div className="text-center text-sm text-muted-foreground">
             <p>
               By continuing, you agree to our{" "}
               <a href="/terms" className="text-primary hover:underline">
@@ -68,7 +76,7 @@ export default function LoginPage() {
             </p>
           </div>
         </div>
-      </main>
-    </DefaultLayout>
+      </div>
+    </div>
   );
 }
