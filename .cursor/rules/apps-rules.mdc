@@ -1,0 +1,66 @@
+---
+alwaysApply: true
+
+# CertiChain Application Rules
+
+## Smart Contracts
+- Only use Solidity ^0.8.20+, Hardhat, and OpenZeppelin contracts.
+- Enforce access control on all external/public functions.
+- Always validate all function inputs (+custom errors where applicable).
+- Prefer `calldata` for external function arguments.
+- Checks-effects-interactions pattern is a must.
+- Emit events on every state change.
+- Optimize for gas cost in struct layout, function calls, and batch operations.
+- Use Hardhat + Chai for testing. >90% coverage required.
+
+## Frontend
+- Must use Next.js 14 App Router (no Pages Router).
+- TypeScript strict mode ONLY. No `any` type or implicit any.
+- Components styled with TailwindCSS and shadcn/ui.
+- All forms: react-hook-form + zod for validation.
+- Server state: TanStack Query. App state: Context only. No Redux/MobX.
+- Web3: wagmi v2 + viem + RainbowKit. No ethers.js or web3.js directly.
+- Prefer named exports; do NOT use `export default` except for Next.js pages/route handlers.
+- All imports ordered: external, internal, relative, then types.
+
+## Backend/API
+- Use Next.js API Route Handlers (in /app/api/).
+- DB: PostgreSQL via Prisma.
+- Auth: Web3Auth for OIDC/social, RainbowKit for wallet connection (no username/password).
+- File uploads only via Pinata/IPFS.
+- Email: Resend with React Email templates.
+
+## TypeScript/Code Style
+- Use explicit types and utility types. No `any`.
+- Use `unknown` and custom type guards when needed.
+- Prefer `interface` for object types, `type` for unions.
+- Records and branded types for ID safety.
+- All code follows SOLID principles.
+- ESLint: import/order and `@typescript-eslint` rules must pass.
+
+## Testing
+- >90% coverage required for contracts.
+- Frontend: test all components, API endpoints, and important hooks.
+- Use descriptive test names and structure.
+
+## File Structure
+- See .cursorrules for required folders and grouping.
+- No “utils/” catch-all in components—use /lib/utils for shared helpers.
+
+## Security & Performance
+- No secrets in frontend code or public files.
+- User input always validated and sanitized.
+- Follow all best practices from .cursorrules security checklist.
+- Components and API handlers should be as small and focused as possible (SRP).
+
+## Documentation
+- Document all complex/public types, API routes, and contract functions with JSDoc.
+- Maintain .env.example for every env variable used.
+
+## Commit/Review
+- Use Conventional Commits.
+- One commit = one logical change.
+- No raw error messages in client-facing responses.
+
+---
+---
