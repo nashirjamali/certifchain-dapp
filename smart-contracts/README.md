@@ -73,6 +73,10 @@ npm run deploy:local
 npm run deploy:sepolia
 ```
 
+**Deployed Contract Address (Sepolia):**
+- `0x1e4ffFD40DbFfCe4f93B2e6c04696880521EA744`
+- [View on Etherscan](https://sepolia.etherscan.io/address/0x1e4ffFD40DbFfCe4f93B2e6c04696880521EA744)
+
 ### Verify Contract
 
 ```bash

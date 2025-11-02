@@ -1,5 +1,5 @@
 import { ethers } from "hardhat";
-import { Contract } from "ethers";
+import hre from "hardhat";
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -17,17 +17,14 @@ async function main() {
 
   if (process.env.ETHERSCAN_API_KEY || process.env.POLYGONSCAN_API_KEY) {
     console.log("Waiting for block confirmations...");
-    await certiChain.deploymentTransaction()?.wait(6);
-
-    console.log("Verifying contract on Etherscan...");
     try {
-      await (certiChain as any).run("verify:verify", {
-        address: address,
-        constructorArguments: [deployer.address],
-      });
+      await certiChain.deploymentTransaction()?.wait(5);
     } catch (error) {
-      console.log("Verification failed:", error);
+      console.log("Note: Waiting for confirmations timed out, but contract is deployed");
     }
+
+    console.log("\nTo verify the contract, run:");
+    console.log(`npx hardhat verify --network sepolia ${address} "${deployer.address}"`);
   }
 
   console.log("\nContract deployment complete!");
