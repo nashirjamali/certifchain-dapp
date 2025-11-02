@@ -1,32 +1,15 @@
 "use client";
 
-import { useState } from "react";
-
 import { SocialLogin } from "@/components/auth/SocialLogin";
 import { WalletConnect } from "@/components/auth/WalletConnect";
 
 export default function LoginPage() {
-  const [isConnected, setIsConnected] = useState(false);
-  const [walletAddress, setWalletAddress] = useState<`0x${string}` | undefined>();
-
   const handleEmailLogin = () => {
     console.log("Email login");
   };
 
   const handleGoogleLogin = () => {
     console.log("Google login");
-  };
-
-  const handleWalletConnect = () => {
-    console.log("Wallet connect");
-    setIsConnected(true);
-    setWalletAddress("0x1234567890123456789012345678901234567890" as `0x${string}`);
-  };
-
-  const handleWalletDisconnect = () => {
-    console.log("Wallet disconnect");
-    setIsConnected(false);
-    setWalletAddress(undefined);
   };
 
   return (
@@ -55,12 +38,7 @@ export default function LoginPage() {
               <div className="flex-1 border-t border-border" />
             </div>
 
-            <WalletConnect
-              onConnect={handleWalletConnect}
-              onDisconnect={handleWalletDisconnect}
-              isConnected={isConnected}
-              address={walletAddress}
-            />
+            <WalletConnect />
           </div>
 
           <div className="text-center text-sm text-muted-foreground">

@@ -1,38 +1,76 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Wallet, LogOut } from "lucide-react";
+import { useAccount, useDisconnect } from "wagmi";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
 
 import { Button } from "@/components/ui/button";
 
 interface WalletConnectProps {
-  onConnect?: () => void;
-  onDisconnect?: () => void;
-  isConnected?: boolean;
-  address?: `0x${string}`;
+  disableRedirect?: boolean;
 }
 
-export function WalletConnect({
-  onConnect,
-  onDisconnect,
-  isConnected,
-  address,
-}: WalletConnectProps) {
+export function WalletConnect({ disableRedirect = false }: WalletConnectProps) {
+  const { address, isConnected } = useAccount();
+  const { openConnectModal } = useConnectModal();
+  const { disconnect } = useDisconnect();
+  const router = useRouter();
+  const [hasRedirected, setHasRedirected] = useState(false);
+
+  useEffect(() => {
+    if (hasRedirected || !isConnected || !address || disableRedirect) {
+      return;
+    }
+
+    const checkUserAndRedirect = async () => {
+      try {
+        const response = await fetch(`/api/auth/user?walletAddress=${address}`);
+        const data = await response.json();
+
+        if (data.success && data.user) {
+          setHasRedirected(true);
+          
+          if (data.user.role === 'INSTITUTION') {
+            router.push('/institution/dashboard');
+          } else {
+            router.push('/');
+          }
+        } else {
+          setHasRedirected(true);
+          router.push('/');
+        }
+      } catch (error) {
+        console.error('Error checking user:', error);
+        setHasRedirected(true);
+        router.push('/');
+      }
+    };
+
+    const timeoutId = setTimeout(() => {
+      checkUserAndRedirect();
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [isConnected, address, disableRedirect, hasRedirected, router]);
+
   if (isConnected && address) {
     return (
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
+      <div className="rounded-xl p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Wallet className="h-5 w-5 text-cyan-400" />
+            <Wallet className="h-5 w-5" />
             <div>
-              <p className="text-sm text-slate-400">Wallet Connected</p>
-              <p className="font-mono text-sm text-slate-200">
+              <p className="text-sm">Wallet Connected</p>
+              <p className="font-mono text-sm">
                 {address.slice(0, 6)}...{address.slice(-4)}
               </p>
             </div>
           </div>
         </div>
         <Button
-          onClick={onDisconnect}
+          onClick={() => disconnect()}
           variant="outline"
           className="w-full"
         >
@@ -45,7 +83,7 @@ export function WalletConnect({
 
   return (
     <Button
-      onClick={onConnect}
+      onClick={openConnectModal}
       variant="default"
       size="lg"
       className="w-full"
