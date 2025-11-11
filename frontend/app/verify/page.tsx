@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Search, CheckCircle2, XCircle, ExternalLink } from "lucide-react";
+import { useVerifyCertificate } from "@/hooks/useCertificateContract";
 
 export default function VerifyPage() {
   const router = useRouter();
@@ -13,7 +14,11 @@ export default function VerifyPage() {
   const [verificationResult, setVerificationResult] = useState<{
     isValid: boolean;
     message: string;
+    certificate?: any;
   } | null>(null);
+  const [tokenIdBigInt, setTokenIdBigInt] = useState<bigint | undefined>();
+
+  const { isValid: blockchainValid, isLoading: isLoadingBlockchain } = useVerifyCertificate(tokenIdBigInt);
 
   useEffect(() => {
     const tokenIdParam = searchParams.get("tokenId");
@@ -31,12 +36,31 @@ export default function VerifyPage() {
     setVerificationResult(null);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const tokenIdNum = BigInt(tokenId);
+      setTokenIdBigInt(tokenIdNum);
 
-      setVerificationResult({
-        isValid: true,
-        message: "Certificate is valid and authentic",
-      });
+      const response = await fetch(`/api/certificates/verify/${tokenId}`);
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        const certificate = data.data;
+        const isValid = !certificate.isRevoked && blockchainValid !== false;
+
+        setVerificationResult({
+          isValid,
+          message: isValid
+            ? "Certificate is valid and authentic"
+            : certificate.isRevoked
+            ? "Certificate has been revoked"
+            : "Certificate verification failed",
+          certificate,
+        });
+      } else {
+        setVerificationResult({
+          isValid: false,
+          message: "Certificate not found",
+        });
+      }
     } catch (error) {
       setVerificationResult({
         isValid: false,
@@ -81,11 +105,11 @@ export default function VerifyPage() {
 
           <Button
             onClick={handleVerify}
-            disabled={!tokenId.trim() || isVerifying}
+            disabled={!tokenId.trim() || isVerifying || isLoadingBlockchain}
             className="w-full"
             size="lg"
           >
-            {isVerifying ? (
+            {isVerifying || isLoadingBlockchain ? (
               <>
                 <Search className="h-4 w-4 animate-spin" />
                 Verifying...
@@ -128,6 +152,19 @@ export default function VerifyPage() {
                 >
                   {verificationResult.message}
                 </p>
+                {verificationResult.isValid && verificationResult.certificate && (
+                  <div className="space-y-2 mb-3">
+                    <p className="text-sm text-green-800 dark:text-green-200">
+                      <strong>Recipient:</strong> {verificationResult.certificate.recipientName}
+                    </p>
+                    <p className="text-sm text-green-800 dark:text-green-200">
+                      <strong>Type:</strong> {verificationResult.certificate.certificateType}
+                    </p>
+                    <p className="text-sm text-green-800 dark:text-green-200">
+                      <strong>Issuer:</strong> {verificationResult.certificate.institution.institutionName}
+                    </p>
+                  </div>
+                )}
                 {verificationResult.isValid && tokenId && (
                   <Button
                     variant="outline"
@@ -155,4 +192,3 @@ export default function VerifyPage() {
     </div>
   );
 }
-

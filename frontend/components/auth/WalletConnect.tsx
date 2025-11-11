@@ -32,8 +32,10 @@ export function WalletConnect({ disableRedirect = false }: WalletConnectProps) {
         if (data.success && data.user) {
           setHasRedirected(true);
           
-          if (data.user.role === 'INSTITUTION') {
+          if (data.user.role === 'INSTITUTION' || data.user.role === 'ADMIN') {
             router.push('/institution/dashboard');
+          } else if (data.user.role === 'RECIPIENT') {
+            router.push('/dashboard');
           } else {
             router.push('/');
           }

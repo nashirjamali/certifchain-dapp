@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { SocialLogin } from "@/components/auth/SocialLogin";
 import { WalletConnect } from "@/components/auth/WalletConnect";
 
@@ -41,7 +42,13 @@ export default function LoginPage() {
             <WalletConnect />
           </div>
 
-          <div className="text-center text-sm text-muted-foreground">
+          <div className="text-center text-sm text-muted-foreground space-y-2">
+            <p>
+              Don't have an account?{" "}
+              <Link href="/auth/register" className="text-primary hover:underline">
+                Register here
+              </Link>
+            </p>
             <p>
               By continuing, you agree to our{" "}
               <a href="/terms" className="text-primary hover:underline">
